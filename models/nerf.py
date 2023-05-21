@@ -81,6 +81,7 @@ class NeRF(nn.Module):
                         nn.Sigmoid())
 
     def forward(self, x, sigma_only=False):
+        train_=x.requires_grad
         """
         Encodes input (xyz+dir) to rgb+sigma (not ready to render yet).
         For rendering this ray, please see rendering.py
@@ -113,11 +114,7 @@ class NeRF(nn.Module):
         if sigma_only:
             return sigma
 
-        xyz_encoding_final = self.xyz_encoding_final(xyz_)
-
-        dir_encoding_input = torch.cat([xyz_encoding_final, input_dir], -1)
-        dir_encoding = self.dir_encoding(dir_encoding_input)
-        rgb = self.rgb(dir_encoding)
+        rgb = torch.ones(sigma.shape[0],3).to(sigma.device)
 
         out = torch.cat([rgb, sigma], -1)
 

@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
     trainer = Trainer(max_epochs=hparams.num_epochs,
                       checkpoint_callback=checkpoint_callback,
-                      check_val_every_n_epoch=hparams.num_epochs,
+                      check_val_every_n_epoch=2,
                       resume_from_checkpoint=hparams.ckpt_path,
                       logger=logger,
                       early_stop_callback=None,

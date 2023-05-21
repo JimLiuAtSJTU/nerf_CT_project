@@ -9,7 +9,7 @@ def get_opts():
     parser.add_argument('--dataset_name', type=str, default='blender',
                         choices=['blender','mednerf', 'llff'],
                         help='which dataset to train/val')
-    parser.add_argument('--img_wh', nargs="+", type=int, default=[800, 800],
+    parser.add_argument('--img_wh', nargs="+", type=int, default=[128, 128],
                         help='resolution (img_w, img_h) of the image')
     parser.add_argument('--spheric_poses', default=False, action="store_true",
                         help='whether images are taken in spheric poses (for llff)')
@@ -26,7 +26,7 @@ def get_opts():
                         help='std dev of noise added to regularize sigma')
         
     parser.add_argument('--loss_type', type=str, default='mse',
-                        choices=['mse'],
+                        choices=['mse','ct'],
                         help='loss to use')
 
     parser.add_argument('--batch_size', type=int, default=1024,

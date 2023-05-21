@@ -174,7 +174,7 @@ class MednerfDataset(Dataset):
         self.define_transforms()
 
         self.read_meta()
-        self.white_back = False
+        self.white_back = True
 
     def read_poses_and_intrinsics(self):
         self.poses_paths = sorted(glob.glob(os.path.join(self.root_dir, '*.txt')))
@@ -282,12 +282,15 @@ class MednerfDataset(Dataset):
 
                 c2w = torch.FloatTensor(self.poses[i])
 
-                img = Image.open(image_path).convert('RGB')
+                img = Image.open(image_path).convert('L')
                 assert img.size[1] * self.img_wh[0] == img.size[0] * self.img_wh[1], \
                     f'''{image_path} has different aspect ratio than img_wh, 
                         please check your data!'''
                 img = img.resize(self.img_wh, Image.LANCZOS)
-                img = self.transform(img)  # (3, h, w)
+                img = 1- self.transform(img) #convert to white back image, black denotes no transmittance.
+
+                img = torch.repeat_interleave(img,3,dim=0)# (3, h, w)
+
                 img = img.view(3, -1).permute(1, 0)  # (h*w, 3) RGB
                 self.all_rgbs += [img]
 
@@ -364,9 +367,11 @@ class MednerfDataset(Dataset):
             if self.split == 'val':
 
                 imgpath=self.image_path_val[idx]
-                img = Image.open(imgpath).convert('RGB')
+                img = Image.open(imgpath).convert('L')
                 img = img.resize(self.img_wh, Image.LANCZOS)
-                img = self.transform(img)  # (3, h, w)
+                img = 1-self.transform(img)
+                img = torch.repeat_interleave(img,3,dim=0)# (3, h, w)
+                # (3, h, w)
                 img = img.view(3, -1).permute(1, 0)  # (h*w, 3)
                 sample['rgbs'] = img
 
