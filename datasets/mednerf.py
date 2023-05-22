@@ -201,7 +201,8 @@ class MednerfDataset(Dataset):
         #intrinsic[0,0]/=scale
         #intrinsic[1,1]/=scale
 
-        print(poses)
+        print('poses',poses)
+        print('intrinsic',intrinsic)
 
         return poses,intrinsic
     def read_meta(self):

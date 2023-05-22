@@ -1,8 +1,17 @@
 import torch
 from kornia.losses import ssim as dssim
 
-def mse(image_pred, image_gt, valid_mask=None, reduction='mean'):
-    value = (image_pred-image_gt)**2
+def mse(image_pred:torch.Tensor, image_gt:torch.Tensor, valid_mask=None, reduction='mean'):
+    try:
+        value = (image_pred-image_gt)**2
+    except:
+        print(f'image_pred{image_pred}')
+        print(f'image_gt{image_gt}')
+
+        print(f'image_pred{image_pred.shape}')
+        print(f'image_gt{image_gt.shape}')
+        raise NotImplementedError
+
     if valid_mask is not None:
         value = value[valid_mask]
     if reduction == 'mean':

@@ -202,7 +202,7 @@ def render_rays(models,
         z_vals = near * (1-z_steps) + far * z_steps
     else: # use linear sampling in disparity space
         z_vals = 1/(1/near * (1-z_steps) + 1/far * z_steps)
-
+    print(z_vals.flip(dims=(1,)),z_vals.shape)
     z_vals = z_vals.expand(N_rays, N_samples)
     
     if perturb > 0: # perturb sampling depths (z_vals)
@@ -236,7 +236,8 @@ def render_rays(models,
         z_vals_ = sample_pdf(z_vals_mid, weights_coarse[:, 1:-1],
                              N_importance, det=(perturb==0)).detach()
                   # detach so that grad doesn't propogate to weights_coarse from here
-
+        print(f'z_vals_,{z_vals_}')
+        print(z_vals_mid)
         z_vals, _ = torch.sort(torch.cat([z_vals, z_vals_], -1), -1)
 
         xyz_fine_sampled = rays_o.unsqueeze(1) + \

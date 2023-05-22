@@ -23,9 +23,10 @@ class CT_MSELoss(nn.Module):
         if targets.shape[1]>1:
             # in rgb format
             targets=targets[:,0]
-        loss = self.loss(inputs['depth_coarse'], targets)
-        if 'depth_fine' in inputs:
-            loss += self.loss(inputs['depth_fine'], targets)
+        loss = self.loss(inputs['transmittance_coarse'], targets)
+      #  loss += inputs['sigma_norm_coarse'].mean()*0.01
+        if 'transmittance_fine' in inputs:
+            loss += self.loss(inputs['transmittance_fine'], targets)
 
         return loss
 

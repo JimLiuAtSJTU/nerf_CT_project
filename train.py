@@ -8,7 +8,12 @@ from datasets import dataset_dict
 
 # models
 from models.nerf import Embedding, NeRF
-from models.rendering import render_rays
+
+flag=0
+if flag==1:
+    from models.rendering import render_rays
+else:
+    from models.renderingCT import render_ray_CT as render_rays
 
 # optimizer, scheduler, visualization
 from utils import *
@@ -93,7 +98,7 @@ class NeRFSystem(LightningModule):
     def train_dataloader(self):
         return DataLoader(self.train_dataset,
                           shuffle=True,
-                          num_workers=4,
+                          num_workers=1,
                           batch_size=self.hparams.batch_size,
                           pin_memory=True)
 
@@ -109,7 +114,7 @@ class NeRFSystem(LightningModule):
         rays, rgbs = self.decode_batch(batch)
         results = self(rays)
         log['train/loss'] = loss = self.loss(results, rgbs)
-        typ = 'fine' if 'rgb_fine' in results else 'coarse'
+        typ = 'fine' if 'transmittance_fine' in results else 'coarse'
 
         if not isinstance(self.loss,loss_dict['ct']):
             with torch.no_grad():
@@ -117,7 +122,8 @@ class NeRFSystem(LightningModule):
                 log['train/psnr'] = psnr_
         else:
             with torch.no_grad():
-                psnr_ = psnr(results[f'depth_{typ}'], rgbs[:,0])
+                transmittance=rgbs[:,0]
+                psnr_ = psnr(results[f'transmittance_{typ}'], transmittance)
                 log['train/psnr'] = psnr_
 
 
@@ -132,23 +138,22 @@ class NeRFSystem(LightningModule):
         rgbs = rgbs.squeeze() # (H*W, 3)
         results = self(rays)
         log = {'val_loss': self.loss(results, rgbs)}
-        typ = 'fine' if 'rgb_fine' in results else 'coarse'
+        typ = 'fine' if 'transmittance_fine' in results else 'coarse'
     
         if batch_nb == 0:
             W, H = self.hparams.img_wh
-            img = results[f'depth_{typ}'].view(H, W, 1).cpu()
-            img = img.permute(2, 0, 1) # (3, H, W)
+            img = results[f'transmittance_{typ}'].view(H, W, 1).cpu()
+            img = img.permute(2, 0, 1) # (1, H, W)
             img_gt = rgbs.view(H, W, 3).permute(2, 0, 1).cpu() # (3, H, W)
             img_gt = img_gt[0:1,:,:] # 1,H,W
-            depth = (results[f'depth_{typ}'].view(1,H, W)).to('cpu') # (1, H, W)
-            stack = torch.stack([img_gt, depth]) # (3, 3, H, W)
+            stack = torch.stack([img_gt, img]) # (2, 1, H, W)
             self.logger.experiment.add_images('val/GT_pred_depth',
                                                stack, self.global_step)
 
         if not isinstance(self.loss, loss_dict['ct']):
             log['val_psnr'] = psnr(results[f'rgb_{typ}'], rgbs)
         else:
-            log['val_psnr'] = psnr(results[f'depth_{typ}'], rgbs[:,0])
+            log['val_psnr'] = psnr(results[f'transmittance_{typ}'], rgbs[:,0])
 
         #log['val_psnr'] = psnr(results[f'rgb_{typ}'], rgbs)
         return log
@@ -182,7 +187,7 @@ if __name__ == '__main__':
 
     trainer = Trainer(max_epochs=hparams.num_epochs,
                       checkpoint_callback=checkpoint_callback,
-                      check_val_every_n_epoch=2,
+                      check_val_every_n_epoch=1,
                       resume_from_checkpoint=hparams.ckpt_path,
                       logger=logger,
                       early_stop_callback=None,
@@ -192,6 +197,8 @@ if __name__ == '__main__':
                       distributed_backend='ddp' if hparams.num_gpus>1 else None,
                       num_sanity_val_steps=1,
                       benchmark=False,
-                      profiler=hparams.num_gpus==1,precision=16)
+                   #   profiler=hparams.num_gpus==1,
+                      precision=16
+                      )
 
     trainer.fit(system)

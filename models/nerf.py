@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 class Embedding(nn.Module):
     def __init__(self, in_channels, N_freqs, logscale=True):
@@ -110,7 +111,7 @@ class NeRF(nn.Module):
                 xyz_ = torch.cat([input_xyz, xyz_], -1)
             xyz_ = getattr(self, f"xyz_encoding_{i+1}")(xyz_)
 
-        sigma = self.sigma(xyz_)
+        sigma = F.softplus(self.sigma(xyz_))
         if sigma_only:
             return sigma
 
