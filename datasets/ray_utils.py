@@ -1,7 +1,7 @@
 import torch
 from kornia import create_meshgrid
 
-visual_=True
+visual_=False
 
 def get_ray_directions(H, W, focal:float):
     """

@@ -111,9 +111,15 @@ class NeRFSystem(LightningModule):
         log['train/loss'] = loss = self.loss(results, rgbs)
         typ = 'fine' if 'rgb_fine' in results else 'coarse'
 
-        with torch.no_grad():
-            psnr_ = psnr(results[f'rgb_{typ}'], rgbs)
-            log['train/psnr'] = psnr_
+        if not isinstance(self.loss,loss_dict['ct']):
+            with torch.no_grad():
+                psnr_ = psnr(results[f'rgb_{typ}'], rgbs)
+                log['train/psnr'] = psnr_
+        else:
+            with torch.no_grad():
+                psnr_ = psnr(results[f'depth_{typ}'], rgbs[:,0])
+                log['train/psnr'] = psnr_
+
 
         return {'loss': loss,
                 'progress_bar': {'train_psnr': psnr_},
@@ -130,15 +136,21 @@ class NeRFSystem(LightningModule):
     
         if batch_nb == 0:
             W, H = self.hparams.img_wh
-            img = results[f'rgb_{typ}'].view(H, W, 3).cpu()
+            img = results[f'depth_{typ}'].view(H, W, 1).cpu()
             img = img.permute(2, 0, 1) # (3, H, W)
             img_gt = rgbs.view(H, W, 3).permute(2, 0, 1).cpu() # (3, H, W)
-            depth = visualize_depth(results[f'depth_{typ}'].view(H, W)) # (3, H, W)
-            stack = torch.stack([img_gt, img, depth]) # (3, 3, H, W)
+            img_gt = img_gt[0:1,:,:] # 1,H,W
+            depth = (results[f'depth_{typ}'].view(1,H, W)).to('cpu') # (1, H, W)
+            stack = torch.stack([img_gt, depth]) # (3, 3, H, W)
             self.logger.experiment.add_images('val/GT_pred_depth',
                                                stack, self.global_step)
 
-        log['val_psnr'] = psnr(results[f'rgb_{typ}'], rgbs)
+        if not isinstance(self.loss, loss_dict['ct']):
+            log['val_psnr'] = psnr(results[f'rgb_{typ}'], rgbs)
+        else:
+            log['val_psnr'] = psnr(results[f'depth_{typ}'], rgbs[:,0])
+
+        #log['val_psnr'] = psnr(results[f'rgb_{typ}'], rgbs)
         return log
 
     def validation_epoch_end(self, outputs):
@@ -180,6 +192,6 @@ if __name__ == '__main__':
                       distributed_backend='ddp' if hparams.num_gpus>1 else None,
                       num_sanity_val_steps=1,
                       benchmark=False,
-                      profiler=hparams.num_gpus==1)
+                      profiler=hparams.num_gpus==1,precision=16)
 
     trainer.fit(system)

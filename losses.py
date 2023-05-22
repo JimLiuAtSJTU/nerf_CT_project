@@ -19,6 +19,10 @@ class CT_MSELoss(nn.Module):
         self.loss = nn.MSELoss(reduction='mean')
 
     def forward(self, inputs, targets):
+        #print(targets.shape) # H*W, 3 or H*W, 1
+        if targets.shape[1]>1:
+            # in rgb format
+            targets=targets[:,0]
         loss = self.loss(inputs['depth_coarse'], targets)
         if 'depth_fine' in inputs:
             loss += self.loss(inputs['depth_fine'], targets)
